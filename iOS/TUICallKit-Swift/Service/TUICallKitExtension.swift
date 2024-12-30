@@ -19,14 +19,14 @@ class TUICallKitExtension: NSObject, TUIExtensionProtocol {
             var requestParam: [String: Any] = [:]
             requestParam[TUICore_TUIGroupObjectFactory_SelectGroupMemberVC_GroupID] = groupID
             requestParam[TUICore_TUIGroupObjectFactory_SelectGroupMemberVC_Name] =
-            TUIGlobalization.getLocalizedString(forKey: "Make-a-call", bundle: TIMCommonLocalizableBundle)
+            TUIGlobalization.getLocalizedString(forKey: "Make-a-call", bundle: TUIKitLocalizableBundle)
             let viewControllerKey = isClassic ? TUICore_TUIGroupObjectFactory_SelectGroupMemberVC_Classic :
             TUICore_TUIGroupObjectFactory_SelectGroupMemberVC_Minimalist
             pushVC.push(viewControllerKey, param: requestParam) { [weak self] responseData in
                 guard let self = self else { return }
                 guard let modelList = responseData[TUICore_TUIGroupObjectFactory_SelectGroupMemberVC_ResultUserList]
-                        as? [TUIUserModel] else { return }
-                let userIDs: [String] = modelList.map { $0.userId }
+                        as? [AnyObject] else { return }
+                let userIDs: [String] = modelList.compactMap { $0.userId }
                 self.startCall(groupID: groupID, userIDs: userIDs, callingType: type)
             }
         }

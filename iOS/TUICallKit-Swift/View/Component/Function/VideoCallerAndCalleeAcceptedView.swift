@@ -10,17 +10,19 @@ import SnapKit
 
 class VideoCallerAndCalleeAcceptedView: UIView {
     
-    let viewModel = VideoCallerAndCalleeAcceptedViewModel()
-    
+    let isCameraOpenObserver = Observer()
+    let isMicMuteObserver = Observer()
+    let audioDeviceObserver = Observer()
+
     lazy var muteMicBtn: BaseControlButton = {
-        let titleKey = viewModel.isMicMute.value ? "TUICallKit.muted" : "TUICallKit.unmuted"
+        let titleKey = TUICallState.instance.isMicMute.value ? "TUICallKit.muted" : "TUICallKit.unmuted"
         let btn = BaseControlButton.create(frame: CGRect.zero,
                                            title: TUICallKitLocalize(key: titleKey) ?? "",
                                            imageSize: kBtnSmallSize) { [weak self] sender in
             guard let self = self else { return }
             self.muteMicEvent(sender: sender)
         }
-        let imageName = viewModel.isMicMute.value ? "icon_mute_on" : "icon_mute"
+        let imageName = TUICallState.instance.isMicMute.value ? "icon_mute_on" : "icon_mute"
         if let image = TUICallKitCommon.getBundleImage(name: imageName) {
             btn.updateImage(image: image)
         }
@@ -29,14 +31,14 @@ class VideoCallerAndCalleeAcceptedView: UIView {
     }()
     
     lazy var closeCameraBtn: BaseControlButton = {
-        let titleKey = viewModel.isCameraOpen.value ? "TUICallKit.cameraOn" : "TUICallKit.cameraOff"
+        let titleKey = TUICallState.instance.isCameraOpen.value ? "TUICallKit.cameraOn" : "TUICallKit.cameraOff"
         let btn = BaseControlButton.create(frame: CGRect.zero,
                                            title: TUICallKitLocalize(key: titleKey) ?? "",
                                            imageSize: kBtnSmallSize) { [weak self] sender in
             guard let self = self else { return }
             self.closeCameraTouchEvent(sender: sender)
         }
-        let imageName = viewModel.isCameraOpen.value ? "icon_camera_on" : "icon_camera_off"
+        let imageName = TUICallState.instance.isCameraOpen.value ? "icon_camera_on" : "icon_camera_off"
         if let image = TUICallKitCommon.getBundleImage(name: imageName) {
             btn.updateImage(image: image)
         }
@@ -45,14 +47,14 @@ class VideoCallerAndCalleeAcceptedView: UIView {
     }()
     
     lazy var changeSpeakerBtn: BaseControlButton = {
-        let titleKey = (viewModel.audioDevice.value == .speakerphone) ? "TUICallKit.speakerPhone" : "TUICallKit.earpiece"
+        let titleKey = (TUICallState.instance.audioDevice.value == .speakerphone) ? "TUICallKit.speakerPhone" : "TUICallKit.earpiece"
         let btn = BaseControlButton.create(frame: CGRect.zero,
                                            title: TUICallKitLocalize(key: titleKey) ?? "",
                                            imageSize: kBtnSmallSize) { [weak self] sender in
             guard let self = self else { return }
             self.changeSpeakerEvent(sender: sender)
         }
-        let imageName = (viewModel.audioDevice.value == .speakerphone) ? "icon_handsfree_on" : "icon_handsfree"
+        let imageName = (TUICallState.instance.audioDevice.value == .speakerphone) ? "icon_handsfree_on" : "icon_handsfree"
         if let image = TUICallKitCommon.getBundleImage(name: imageName) {
             btn.updateImage(image: image)
         }
@@ -85,6 +87,15 @@ class VideoCallerAndCalleeAcceptedView: UIView {
         return btn
     }()
     
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        registerObserveState()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     // MARK: UI Specification Processing
     private var isViewReady: Bool = false
     override func didMoveToWindow() {
@@ -143,39 +154,39 @@ class VideoCallerAndCalleeAcceptedView: UIView {
     
     // MARK: Action Event
     func muteMicEvent(sender: UIButton) {
-        viewModel.muteMic()
-        updateMuteAudioBtn(mute: viewModel.isMicMute.value == true)
+        CallEngineManager.instance.muteMic()
+        updateMuteAudioBtn(mute: TUICallState.instance.isMicMute.value == true)
     }
     
     func closeCameraTouchEvent(sender: UIButton) {
-        updateCloseCameraBtn(open: viewModel.isCameraOpen.value != true)
-        if viewModel.isCameraOpen.value == true {
-            viewModel.closeCamera()
+        updateCloseCameraBtn(open: TUICallState.instance.isCameraOpen.value != true)
+        if TUICallState.instance.isCameraOpen.value == true {
+            CallEngineManager.instance.closeCamera()
             virtualBackgroundButton.isHidden = true
             switchCameraBtn.isHidden = true
         } else {
-            guard let videoViewEntity = VideoFactory.instance.viewMap[viewModel.selfUser.value.id.value] else { return }
-            viewModel.openCamera(videoView: videoViewEntity.videoView)
+            guard let videoViewEntity = VideoFactory.instance.viewMap[TUICallState.instance.selfUser.value.id.value] else { return }
+            CallEngineManager.instance.openCamera(videoView: videoViewEntity.videoView)
             virtualBackgroundButton.isHidden = false
             switchCameraBtn.isHidden = false
         }
     }
     
     func changeSpeakerEvent(sender: UIButton) {
-        viewModel.changeSpeaker()
-        updateChangeSpeakerBtn(isSpeaker: viewModel.audioDevice.value == .speakerphone)
+        CallEngineManager.instance.changeSpeaker()
+        updateChangeSpeakerBtn(isSpeaker: TUICallState.instance.audioDevice.value == .speakerphone)
     }
     
     @objc func hangupTouchEvent(sender: UIButton) {
-        viewModel.hangup()
+        CallEngineManager.instance.hangup()
     }
     
     @objc func switchCameraTouchEvent(sender: UIButton) {
-        viewModel.switchCamera()
+        CallEngineManager.instance.switchCamera()
     }
     
     @objc func virtualBackgroundTouchEvent(sender: UIButton) {
-        viewModel.virtualBackground()
+        CallEngineManager.instance.setBlurBackground()
     }
     
     // MARK: Update UI
@@ -201,5 +212,22 @@ class VideoCallerAndCalleeAcceptedView: UIView {
         if let image = TUICallKitCommon.getBundleImage(name: open ? "icon_camera_on" : "icon_camera_off") {
             closeCameraBtn.updateImage(image: image)
         }
+    }
+    
+    func registerObserveState() {
+        TUICallState.instance.isCameraOpen.addObserver(isCameraOpenObserver) { [weak self] newValue, _ in
+            guard let self = self else { return }
+            self.updateCloseCameraBtn(open: TUICallState.instance.isCameraOpen.value)
+        }
+        
+        TUICallState.instance.isMicMute.addObserver(isMicMuteObserver, closure: { [weak self] newValue, _ in
+            guard let self = self else { return }
+            self.updateMuteAudioBtn(mute: newValue)
+        })
+        
+        TUICallState.instance.audioDevice.addObserver(audioDeviceObserver, closure: { [weak self] newValue, _ in
+            guard let self = self else { return }
+            self.updateChangeSpeakerBtn(isSpeaker: newValue == .speakerphone)
+        })
     }
 }

@@ -19,6 +19,7 @@ import TXLiteAVSDK_Professional
 class TUICallKitImpl: TUICallKit {
     static let instance = TUICallKitImpl()
     let selfUserCallStatusObserver = Observer()
+    let callingBellFeature = CallingBellFeature()
     
     override init() {
         super.init()
@@ -296,17 +297,19 @@ private extension TUICallKitImpl {
     
     func registerObserveState() {
         TUICallState.instance.selfUser.value.callStatus.addObserver(selfUserCallStatusObserver, closure: { newValue, _ in
-            if TUICallState.instance.selfUser.value.callRole.value != TUICallRole.none &&
-                TUICallState.instance.selfUser.value.callStatus.value == TUICallStatus.waiting {
-                TUICallState.instance.audioDevice.value = TUIAudioPlaybackDevice.earpiece
-                CallEngineManager.instance.setAudioPlaybackDevice(device: TUIAudioPlaybackDevice.earpiece)
-                WindowManager.instance.showCallWindow(TUICallState.instance.enableIncomingBanner)
-            }
-            
-            if TUICallState.instance.selfUser.value.callRole.value == TUICallRole.none &&
-                TUICallState.instance.selfUser.value.callStatus.value == TUICallStatus.none {
-                WindowManager.instance.closeCallWindow()
-                WindowManager.instance.closeFloatWindow()
+            if TUICallState.instance.selfUser.value.callRole.value != TUICallRole.none {
+                if TUICallState.instance.selfUser.value.callStatus.value == TUICallStatus.waiting {
+                    TUICallState.instance.audioDevice.value = TUIAudioPlaybackDevice.earpiece
+                    CallEngineManager.instance.setAudioPlaybackDevice(device: TUIAudioPlaybackDevice.earpiece)
+                    WindowManager.instance.showCallWindow(TUICallState.instance.enableIncomingBanner)
+                } else if TUICallState.instance.selfUser.value.callStatus.value == TUICallStatus.accept && !WindowManager.instance.isFloating {
+                    WindowManager.instance.showCallWindow(false)
+                }
+            } else {
+                if TUICallState.instance.selfUser.value.callStatus.value == TUICallStatus.none {
+                    WindowManager.instance.closeCallWindow()
+                    WindowManager.instance.closeFloatWindow()
+                }
             }
         })
     }

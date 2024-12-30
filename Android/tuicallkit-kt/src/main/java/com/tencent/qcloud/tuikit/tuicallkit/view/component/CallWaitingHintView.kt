@@ -9,11 +9,9 @@ import com.tencent.qcloud.tuikit.tuicallengine.impl.base.Observer
 import com.tencent.qcloud.tuikit.tuicallkit.R
 import com.tencent.qcloud.tuikit.tuicallkit.data.Constants
 import com.tencent.qcloud.tuikit.tuicallkit.state.TUICallState
-import com.tencent.qcloud.tuikit.tuicallkit.viewmodel.component.CallWaitingHintViewModel
 
 class CallWaitingHintView(context: Context) : androidx.appcompat.widget.AppCompatTextView(context) {
 
-    private var viewModel = CallWaitingHintViewModel()
     private var isFirstShowAccept = true
 
     private var callStatusObserver = Observer<TUICallDefine.Status> {
@@ -45,22 +43,22 @@ class CallWaitingHintView(context: Context) : androidx.appcompat.widget.AppCompa
         setTextColor(context.resources.getColor(R.color.tuicallkit_color_white))
         gravity = Gravity.CENTER
 
-        text = if (TUICallDefine.Scene.GROUP_CALL == viewModel.scene.get()) {
-            if (TUICallDefine.Role.Caller == viewModel.callRole.get()) {
+        text = if (TUICallDefine.Scene.GROUP_CALL == TUICallState.instance.scene.get()) {
+            if (TUICallDefine.Role.Caller == TUICallState.instance.selfUser.get().callRole.get()) {
                 context.getString(R.string.tuicallkit_wait_response)
             } else {
                 context.getString(R.string.tuicallkit_wait_accept_group)
             }
         } else {
-            updateSingleCallWaitingText()
+            updateStatusText()
         }
     }
 
     private fun updateSingleCallWaitingText(): String {
-        return if (TUICallDefine.Role.Caller == viewModel.callRole.get()) {
+        return if (TUICallDefine.Role.Caller == TUICallState.instance.selfUser.get().callRole.get()) {
             context.getString(R.string.tuicallkit_waiting_accept)
         } else {
-            if (TUICallDefine.MediaType.Video == viewModel.mediaType.get()) {
+            if (TUICallDefine.MediaType.Video == TUICallState.instance.mediaType.get()) {
                 context.getString(R.string.tuicallkit_invite_video_call)
             } else {
                 context.getString(R.string.tuicallkit_invite_audio_call)
@@ -68,16 +66,16 @@ class CallWaitingHintView(context: Context) : androidx.appcompat.widget.AppCompa
         }
     }
 
-    private fun updateStatusText() {
-        if (TUICallDefine.Scene.GROUP_CALL == viewModel.scene.get()
-            && TUICallDefine.Status.Accept == viewModel.callStatus.get()
+    private fun updateStatusText(): String {
+        if (TUICallDefine.Scene.GROUP_CALL == TUICallState.instance.scene.get()
+            && TUICallDefine.Status.Accept == TUICallState.instance.selfUser.get().callStatus.get()
         ) {
             visibility = View.GONE
-            return
+            return ""
         }
-        if (viewModel.callStatus.get() == TUICallDefine.Status.Waiting) {
+        if (TUICallState.instance.selfUser.get().callStatus.get() == TUICallDefine.Status.Waiting) {
             text = updateSingleCallWaitingText()
-        } else if (viewModel.callStatus.get() == TUICallDefine.Status.Accept) {
+        } else if (TUICallState.instance.selfUser.get().callStatus.get() == TUICallDefine.Status.Accept) {
             if (TUICallState.instance.selfUser.get().callRole.get() == TUICallDefine.Role.Caller && isFirstShowAccept) {
                 text = context.getString(R.string.tuicallkit_accept_single)
                 postDelayed({
@@ -89,15 +87,17 @@ class CallWaitingHintView(context: Context) : androidx.appcompat.widget.AppCompa
         } else {
             text = ""
         }
+
+        return text.toString()
     }
 
     private fun addObserver() {
-        viewModel.callStatus.observe(callStatusObserver)
-        viewModel.networkReminder.observe(networkQualityObserver)
+        TUICallState.instance.selfUser.get().callStatus.observe(callStatusObserver)
+        TUICallState.instance.networkQualityReminder.observe(networkQualityObserver)
     }
 
     private fun removeObserver() {
-        viewModel.callStatus.removeObserver(callStatusObserver)
-        viewModel.networkReminder.removeObserver(networkQualityObserver)
+        TUICallState.instance.selfUser.get().callStatus.removeObserver(callStatusObserver)
+        TUICallState.instance.networkQualityReminder.removeObserver(networkQualityObserver)
     }
 }

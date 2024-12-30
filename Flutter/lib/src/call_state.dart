@@ -48,6 +48,7 @@ class CallState {
   bool enableFloatWindow = false;
   bool showVirtualBackgroundButton = false;
   bool enableBlurBackground = false;
+  NetworkQualityHint networkQualityReminder = NetworkQualityHint.none;
 
   bool isChangedBigSmallVideo = false;
   bool isOpenFloatWindow = false;
@@ -77,6 +78,7 @@ class CallState {
         await CallState.instance
             .handleCallReceivedData(callerId, calleeIdList, groupId, callMediaType);
         await TUICallKitPlatform.instance.updateCallStateToNative();
+        await CallManager.instance.enableWakeLock(true);
         CallingBellFeature.startRing();
 
         if (Platform.isIOS) {
@@ -88,15 +90,20 @@ class CallState {
             CallManager.instance.launchCallingPage();
           }
         } else if (Platform.isAndroid) {
-          if (CallState.instance.enableIncomingBanner) {
+          if (await CallManager.instance.isScreenLocked()) {
+            CallManager.instance.openLockScreenApp();
+            return;
+          }
+
+          if (CallState.instance.enableIncomingBanner && !(await CallManager.instance.isSamsungDevice())) {
             CallState.instance.isInNativeIncomingBanner = true;
-            await TUICallKitPlatform.instance.showIncomingBanner();
+            CallManager.instance.showIncomingBanner();
           } else {
             if (await TUICallKitPlatform.instance.isAppInForeground()) {
               CallState.instance.isInNativeIncomingBanner = false;
               CallManager.instance.launchCallingPage();
             } else {
-              TUICallKitPlatform.instance.pullBackgroundApp();
+              CallManager.instance.pullBackgroundApp();
             }
           }
         }
@@ -104,9 +111,13 @@ class CallState {
       onCallCancelled: (String callerId) {
         TRTCLogger.info('TUICallObserver onCallCancelled(callerId:$callerId)');
         CallingBellFeature.stopRing();
+        if (CallState.instance.mediaType == TUICallMediaType.video && CallState.instance.isCameraOpen ) {
+          CallManager.instance.closeCamera();
+        }
         CallState.instance.cleanState();
         TUICore.instance.notifyEvent(setStateEventOnCallEnd);
         TUICallKitPlatform.instance.updateCallStateToNative();
+        CallManager.instance.enableWakeLock(false);
       },
       onCallBegin: (TUIRoomId roomId, TUICallMediaType callMediaType, TUICallRole callRole) {
         TRTCLogger.info(
@@ -135,9 +146,13 @@ class CallState {
         TRTCLogger.info(
             'TUICallObserver onCallEnd(roomId:$roomId, callMediaType:$callMediaType, callRole:$callRole, totalTime:$totalTime)');
         CallState.instance.stopTimer();
+        if (CallState.instance.mediaType == TUICallMediaType.video && CallState.instance.isCameraOpen ) {
+          CallManager.instance.closeCamera();
+        }
         CallState.instance.cleanState();
         TUICore.instance.notifyEvent(setStateEventOnCallEnd);
         TUICallKitPlatform.instance.updateCallStateToNative();
+        CallManager.instance.enableWakeLock(false);
       },
       onCallMediaTypeChanged:
           (TUICallMediaType oldCallMediaType, TUICallMediaType newCallMediaType) {
@@ -169,8 +184,12 @@ class CallState {
           String? nickName =
               await CallState.instance.nameCallback?.call(userId) ?? userId;
           //////////////// 显示 nickName 而不是 userId ////////////////
-          CallManager.instance
-              .showToast('$nickName ${CallKit_t('callRequestDeclined')}');
+          // CallManager.instance
+          //     .showToast('$nickName ${CallKit_t('callRequestDeclined')}');
+
+              CallManager.instance
+              .showToast('$nickName ${CallKit_t('otherPartyDeclinedCallRequest')}');
+          // CallManager.instance.showToast(CallKit_t('otherPartyDeclinedCallRequest'));
         }
       },
       onUserNoResponse: (String userId) async {
@@ -317,15 +336,64 @@ class CallState {
           }
         }
       },
-      onUserNetworkQualityChanged: (List<TUINetworkQualityInfo> networkQualityList) {},
-      onUserVoiceVolumeChanged: (Map<String, int> volumeMap) {
-        for (var remoteUser in CallState.instance.remoteUserList) {
-          remoteUser.playOutVolume = volumeMap[remoteUser.id] ?? 0;
+      onUserNetworkQualityChanged: (List<TUINetworkQualityInfo> networkQualityList) {
+        if (networkQualityList.isEmpty) {
+          return;
         }
-        CallState.instance.selfUser.playOutVolume =
-            volumeMap[CallState.instance.selfUser.id] ?? 0;
-        TUICallKitPlatform.instance.updateCallStateToNative();
+        if(TUICallScene.groupCall == CallState.instance.scene) {
+          for (var networkQualityInfo in networkQualityList) {
+            if (networkQualityInfo.userId == CallState.instance.selfUser.id) {
+              CallState.instance.selfUser.networkQualityReminder = CallState.instance.isBadNetwork(networkQualityInfo.quality);
+              continue;
+            }
+            for (var remoteUser in CallState.instance.remoteUserList) {
+              if (remoteUser.id == networkQualityInfo.userId) {
+                remoteUser.networkQualityReminder = CallState.instance.isBadNetwork(networkQualityInfo.quality);
+              }
+            }
+          }
+        } else if (TUICallScene.singleCall == CallState.instance.scene) {
+          TUINetworkQuality localQuality = TUINetworkQuality.unknown;
+          TUINetworkQuality remoteQuality = TUINetworkQuality.unknown;
+
+          for (var networkQualityInfo in networkQualityList) {
+            if (CallState.instance.selfUser.id == networkQualityInfo.userId) {
+              localQuality = networkQualityInfo.quality;
+            } else {
+              remoteQuality = networkQualityInfo.quality;
+            }
+          }
+
+          if (CallState.instance.isBadNetwork(localQuality)) {
+            CallState.instance.networkQualityReminder = NetworkQualityHint.local;
+          } else if (CallState.instance.isBadNetwork(remoteQuality)) {
+            CallState.instance.networkQualityReminder = NetworkQualityHint.remote;
+          } else {
+            CallState.instance.networkQualityReminder = NetworkQualityHint.none;
+          }
+        }
         TUICore.instance.notifyEvent(setStateEvent);
+      },
+      onUserVoiceVolumeChanged: (Map<String, int> volumeMap) {
+        bool needUpdate2Native = false;
+        for (var remoteUser in CallState.instance.remoteUserList) {
+          var volume = volumeMap[remoteUser.id] ?? 0;
+          remoteUser.playOutVolume = volume;
+          if (volume > 10) {
+            needUpdate2Native = true;
+          }
+        }
+
+        var selfVolume =  volumeMap[CallState.instance.selfUser.id] ?? 0;
+        CallState.instance.selfUser.playOutVolume = selfVolume;
+        if (selfVolume > 10) {
+          needUpdate2Native = true;
+        }
+
+        if (needUpdate2Native) {
+          TUICallKitPlatform.instance.updateCallStateToNative();
+          TUICore.instance.notifyEvent(setStateEvent);
+        }
       },
       onKickedOffline: () {
         TRTCLogger.info('TUICallObserver onKickedOffline()');
@@ -497,5 +565,9 @@ class CallState {
 
     CallState.instance.isChangedBigSmallVideo = false;
     CallState.instance.enableBlurBackground = false;
+  }
+
+  bool isBadNetwork(TUINetworkQuality quality)  {
+    return quality == TUINetworkQuality.bad || quality == TUINetworkQuality.vBad || quality == TUINetworkQuality.down;
   }
 }

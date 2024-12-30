@@ -2,6 +2,7 @@ package com.tencent.qcloud.tuikit.tuicallkit.view
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -62,6 +63,12 @@ class CallKitActivity : AppCompatActivity() {
         setContentView(R.layout.tuicallkit_activity_call_kit)
         initStatusBar()
         addObserver()
+
+        requestedOrientation = when (TUICallState.instance.orientation) {
+            Constants.Orientation.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            Constants.Orientation.LandScape -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
     }
 
     override fun onResume() {
@@ -94,6 +101,9 @@ class CallKitActivity : AppCompatActivity() {
     }
 
     private fun startActivityByAction() {
+        if (TUICallState.instance.selfUser.get().callStatus.get() == TUICallDefine.Status.Accept) {
+            return
+        }
         if (intent.action == Constants.ACCEPT_CALL_ACTION) {
             TUILog.i(TAG, "IncomingView -> startActivityByAction")
             EngineManager.instance.accept(null)

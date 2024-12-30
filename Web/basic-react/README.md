@@ -1,6 +1,6 @@
 # Call UIKit for React QuickStart
 
-<b> English </b> | <a href="https://github.com/tencentyun/TUICallKit/blob/main/Web/call-uikit-demos/basic-react/README-zh_CN.md"> 简体中文 </a>
+<b> English </b> | <a href="https://github.com/tencentyun/TUICallKit/blob/main/Web/basic-react/README-zh_CN.md"> 简体中文 </a>
 
 <img src="https://img.shields.io/badge/Platform-React-orange.svg"><img src="https://img.shields.io/badge/Language-Typescript-orange.svg">
 
@@ -39,26 +39,26 @@ If you would like to try the demo specifically fit to your usage, you can do so 
 1. Clone this repository
 
   ```shell
-   git clone https://github.com/tencentyun/TUICallKit.git
+    git clone https://github.com/tencentyun/TUICallKit.git
   ```
 
 2. Install dependencies
 
   ```shell
-   cd ./TUICallKit/Web/call-uikit-demos/basic-react
-   npm install # or, yarn
+    cd ./TUICallKit/Web/basic-react
+    npm install
   ```
 
 3. Specify the SDKAppID and SDKSecretKey
-   Input the SDKAppID and SDKSecretKey into file `Web/call-uikit-demos/basic-react/public/debug/GenerateTestUserSig-es.js`
+   Input the SDKAppID and SDKSecretKey into file `Web/basic-react/src/debug/GenerateTestUserSig-es.js`
   ```javascript
-   const SDKAPPID = 0;
-   const SECRETKEY = '';
+    let SDKAppID = 0;
+    let SecretKey = '';
   ```
 
 4. Run the demo
   ```shell
-   npm run dev
+    npm run dev
   ```
 
 
@@ -75,3 +75,8 @@ If you would like to try the demo specifically fit to your usage, you can do so 
 - If you want to learn more about the product features, you can click on the following [link](https://trtc.io/products/call).
 - If you encounter difficulties, you can refer to [FAQs](https://trtc.io/document/53565), here are the most frequently encountered problems of developers, covering various platforms, I hope you can Help you solve problems quickly.
 - For complete API documentation, see [Audio Video Call SDK API Example](https://trtc.io/document/51014): including TUICallKit (with UIKit), TUICallEngine (without UIKit), and call events Callbacks, etc.
+
+## FAQs
+
+### What is Aegis used for in the project?
+Aegis is used for performance analysis purposes only. If you don't need it, you can simply remove the Aegis-related code from the project without affecting its normal functionality.

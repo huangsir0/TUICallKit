@@ -1,112 +1,63 @@
-import React, { useMemo, useState } from "react";
-import "./App.css";
-import { TUICallKit, TUICallKitServer, TUIGlobal } from "@tencentcloud/call-uikit-react";
-import "tdesign-react/es/style/index.css";
-import SwitchMode from "./components/SwitchMode/SwitchMode";
-import DebugPanel from "./components/DebugPanel/DebugPanel";
-import ResultList from "./components/ResultList/ResultList";
-import SearchBox from "./components/SearchBox/SearchBox";
-import QRCodeContainer  from "./components/QRCodeContainer/QRCodeContainer";
-import StoreContext from "./store/context";
-import { useTranslation } from "react-i18next";
+import { useState, useMemo, useEffect } from "react";
+import { RouterProvider } from "react-router-dom";
+import { ConfigProvider } from 'antd';
+import { TUICallKit } from '@tencentcloud/call-uikit-react';
+import router from './routes/index.tsx';
+import { UserInfoContext } from './context/index.ts';
+import { useLanguage, useAegis } from './hooks/index.ts';
+import { checkLocation, AntdConfig, isH5, ClassNames, initViewport } from './utils/index.ts';
+import Layout from "./components/Layout/Layout.tsx";
+import './App.css';
 
-
-function App() {
-  const { i18n } = useTranslation();
-  const [useId, setUseId] = useState("");
-  const [searchResult, setSearchResult] = useState([]);
-  const [callType, setCallType] = useState(2);
-  const [isCalling, setCallStatus] = useState(false);
-  const [loginInfo, setLoginInfo] = useState({})
-  const upDataUserId = (value: any) => {
-    setUseId(value);
-  };
-
-  const upDataCallType = (value: any) => {
-    setCallType(value);
-  };
-
-  const upDataSearchResult = (value: any) => {
-    setSearchResult(value);
-  };
-
-  const upDataLoginInfo = (value: any) =>{
-    setLoginInfo(value)
-  } 
-
-  const handleBeforeCalling = () => {
-    setCallStatus(true)
-  };
+export default function App() {
+  const { t } = useLanguage();
+  const [userInfo, setUserInfo] = useState({
+    userID: '',
+    SDKAppID: 0,
+    SecretKey: '',
+    userSig: '',
+    isLogin: false,
+    currentPage: 'home',
+    isCall: false,
+  })
+  const UserInfoContextValue = useMemo(() => ({
+    userInfo,
+    setUserInfo,
+  }), [userInfo, setUserInfo]);
+  const { reportEvent } = useAegis();
+  
+  useEffect(() => {
+    reportEvent({ apiName: 'run.call.start' });
+    isH5 && initViewport();
+    if (!checkLocation()) {
+      alert(t('localhost protocol / HTTPS protocol'));
+    }
+  }, []);
 
   const handleAfterCalling = () => {
-    setCallStatus(false)
-  };
-
-  const setLanguage = (value:any) => {
-    TUICallKitServer.setLanguage(value.lang)
-    let lang = value.lang;
-    if (value.lang === 'zh-cn') {
-      lang = 'zh';
-    } else if (value.lang === 'ja_JP') {
-      lang = 'jp';
-    }
-    i18n.changeLanguage(lang);
+    setUserInfo({
+      ...userInfo,
+      isCall: false,
+    });
   }
-
-  const callkitStyle = useMemo(() => {
-    if (TUIGlobal.isPC) {
-      return { width: '960px', height: '630px' };
-    }
-
-    return { width: '100%', height: window.innerHeight };
-  }, [TUIGlobal.isPC]);
-
   return (
-    <>
-      <TUICallKit className='TUICallKit-body' 
-      style={callkitStyle} 
-      beforeCalling={handleBeforeCalling} 
-      afterCalling={handleAfterCalling} 
-      allowedMinimized={true}
-      allowedFullScree={true}
-      ></TUICallKit>
-      {
-        <StoreContext.Provider
-          value={{
-            useId,
-            callType,
-            searchResult,
-            loginInfo,
-            upDataCallType,
-            upDataUserId,
-            upDataSearchResult,
-            setLanguage,
-            upDataLoginInfo
-          }}
-        >
-          <div className="wrapper">
-            <div className="switch">
-              <SwitchMode></SwitchMode>
-            </div>
-            {(useId && !isCalling && TUIGlobal.isPC) && <QRCodeContainer></QRCodeContainer>}
-            <div className="call-kit-container">
-              <div className="search-window">
-                <SearchBox></SearchBox>
-              </div>
-              <div className="result-list">
-                <ResultList></ResultList>
-              </div>
-            </div>
-            {!useId && (
-              <div id="debug">
-                <DebugPanel></DebugPanel>
-              </div>
-            )}
-          </div>
-        </StoreContext.Provider>
-      }
-    </>
-  );
+    <ConfigProvider
+      theme={AntdConfig}
+    >
+      <UserInfoContext.Provider value={UserInfoContextValue}>
+        <TUICallKit
+          className={ClassNames([{'call-uikit-mobile': isH5}, {'call-uikit-pc': !isH5 }])}
+          afterCalling={handleAfterCalling}
+        />
+        {
+          isH5 
+            ? <RouterProvider router={router} />
+            : (<Layout>
+                <RouterProvider router={router} />
+              </Layout>)
+        }
+      </UserInfoContext.Provider>
+    </ConfigProvider>
+  )
 }
 
-export default App;

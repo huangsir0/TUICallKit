@@ -2,7 +2,7 @@
 import { ref, onMounted } from "vue";
 import { TUICallKit, TUICallKitServer, STATUS, TUIGlobal } from "@tencentcloud/call-uikit-vue2";
 import DeviceDetector from "./components/DeviceDetector/index.vue";
-import * as GenerateTestUserSig from "../public/debug/GenerateTestUserSig-es.js";
+import * as GenerateTestUserSig from "./debug/GenerateTestUserSig-es.js";
 import TIM from "@tencentcloud/chat";
 import copy from "copy-to-clipboard";
 import videoBlackSVG from "./assets/videoBlack.svg";
@@ -40,13 +40,13 @@ const groupID = ref<string>("");
 let tim: any = null;
 
 onMounted(() => {
-  const sdkAppID = GenerateTestUserSig.SDKAPPID || getUrlParam("SDKAppID");
+  const sdkAppID = getUrlParam("SDKAppID");
   if (!sdkAppID) SDKAppID.value = 0;
   else {
     SDKAppID.value = parseInt(sdkAppID as string);
     isNewTab.value = true;
   }
-  SecretKey.value = GenerateTestUserSig.SECRETKEY || getUrlParam("SecretKey") || "";
+  SecretKey.value = getUrlParam("SecretKey") || "";
   TUICallKitServer.setLanguage(locale.value);
   finishedRTCDetectStatus.value = localStorage.getItem("callkit-basic-demo-finish-rtc-detect") || "";
 });
