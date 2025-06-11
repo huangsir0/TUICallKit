@@ -14,8 +14,16 @@ import 'package:tencent_calls_uikit/src/utils/string_stream.dart';
 import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
 import 'package:tencent_cloud_uikit_core/tencent_cloud_uikit_core.dart';
 
-//
+////////////////////// 自定义 //////////////////////
 typedef NickNameCallback = Future<String?> Function(String userId);
+typedef CheckAutoReplyIsOnCallback = Future<bool> Function(
+  String callerId,
+  List<String> calleeIdList,
+  String groupId,
+  TUICallMediaType callMediaType,
+  String? userData,
+);
+////////////////////// 自定义 //////////////////////
 
 class CallState {
   static final CallState instance = CallState._internal();
@@ -53,13 +61,21 @@ class CallState {
   bool isChangedBigSmallVideo = false;
   bool isOpenFloatWindow = false;
 
-  //////////////// 显示 nickName 而不是 userId ////////////////
+   ////////////////////// 自定义 //////////////////////
+  // 显示 nickName 而不是 userId
   NickNameCallback? nameCallback;
 
   void setNameCallback({NickNameCallback? nameCallback}) {
     this.nameCallback = nameCallback;
   }
-  //////////////// 显示 nickName 而不是 userId ////////////////
+
+  // 是否开启自动回复
+  CheckAutoReplyIsOnCallback? checkAutoReplyIsOnCallback;
+  void setCheckAutoReplyIsOnCallback(
+      {CheckAutoReplyIsOnCallback? checkAutoReplyIsOnCallback}) {
+    this.checkAutoReplyIsOnCallback = checkAutoReplyIsOnCallback;
+  }
+  ////////////////////// 自定义 //////////////////////
 
   bool isInNativeIncomingFloatWindow = false;
   bool enableIncomingBanner = false;
@@ -73,6 +89,20 @@ class CallState {
       },
       onCallReceived: (String callerId, List<String> calleeIdList, String groupId,
           TUICallMediaType callMediaType, String? userData) async {
+        // 外部开启自动回复时不接听音视频
+        if (await CallState.instance.checkAutoReplyIsOnCallback?.call(
+              callerId,
+              calleeIdList,
+              groupId,
+              callMediaType,
+              userData,
+            ) == true) {
+          Future.delayed(const Duration(seconds: 3)).then((_) {
+            CallManager.instance.reject();
+          });
+          return;
+        }
+
         TRTCLogger.info(
             'TUICallObserver onCallReceived(callerId:$callerId, calleeIdList:$calleeIdList, groupId:$groupId, callMediaType:$callMediaType, userData:$userData), version:${Constants.pluginVersion}');
         await CallState.instance

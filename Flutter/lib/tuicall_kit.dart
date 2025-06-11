@@ -11,11 +11,17 @@ class TUICallKit {
 
   static TUICallKitNavigatorObserver navigatorObserver = TUICallKitNavigatorObserver.getInstance();
 
+  ////////////////////// 自定义 //////////////////////
   // 新增 nickName 回调
-
   void setNameCallback({NickNameCallback? nameCallback}) {
     CallState.instance.setNameCallback(nameCallback: nameCallback);
   }
+
+  // 新增 checkAutoReplyIsOnCallback 回调：判断是否开启自动回复
+  void setCheckAutoReplyIsOnCallback({CheckAutoReplyIsOnCallback? checkAutoReplyIsOnCallback}) {
+    CallState.instance.setCheckAutoReplyIsOnCallback(checkAutoReplyIsOnCallback: checkAutoReplyIsOnCallback);
+  }
+  ////////////////////// 自定义 //////////////////////
 
   /// login TUICallKit
   ///
