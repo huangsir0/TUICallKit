@@ -562,6 +562,9 @@ class CallManager {
     TUICallEngine.instance.unInit();
     CallingBellFeature.stopRing();
     CallState.instance.cleanState();
+    ////// 发现退出后监听没移除 start
+    CallState.instance.unRegisterEngineObserver();
+    ////// 发现退出后监听没移除 end
     TUICallKitPlatform.instance.updateCallStateToNative();
   }
 
