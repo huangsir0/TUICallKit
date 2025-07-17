@@ -595,6 +595,9 @@ class CallState {
 
     CallState.instance.isChangedBigSmallVideo = false;
     CallState.instance.enableBlurBackground = false;
+    ////// 发现退出后监听没移除 start
+    CallState.instance.unRegisterEngineObserver();
+    ////// 发现退出后监听没移除 end
   }
 
   bool isBadNetwork(TUINetworkQuality quality)  {
