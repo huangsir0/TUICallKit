@@ -2,7 +2,8 @@ import 'package:tencent_calls_uikit/src/call_define.dart';
 import 'package:tencent_calls_uikit/src/impl/call_manager.dart';
 import 'package:tencent_calls_uikit/src/ui/call_navigator_observer.dart';
 
-import 'src/call_state.dart';
+import 'impl/call_state.dart';
+
 
 class TUICallKit {
   static final TUICallKit _instance = TUICallKit();
