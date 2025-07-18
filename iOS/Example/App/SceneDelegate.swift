@@ -33,20 +33,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-    }
-    
-    static func showMainController() {
-        let mainViewController = MainViewController()
-        let navigationController = UINavigationController(rootViewController: mainViewController)
         
-        if let keyWindow = SceneDelegate.getKeyWindow() {
-            keyWindow.rootViewController = navigationController
-            keyWindow.makeKeyAndVisible()
-        } else {
-            debugPrint("Window Show MainViewController Error")
-        }
+        sendStopRingingToExtension()
     }
-    
+     
+    func sendStopRingingToExtension() {
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                             CFNotificationName("APNsStopRinging" as CFString), nil, nil, true)
+    }
+
     static func showLoginViewController() {
         let loginViewController = LoginViewController()
         let navigationController = UINavigationController(rootViewController: loginViewController)

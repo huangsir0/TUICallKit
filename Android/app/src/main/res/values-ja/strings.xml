@@ -10,6 +10,7 @@
     <string name="app_btn_confirm">OK</string>
     <string name="app_user_id">ユーザーID</string>
     <string name="app_hint_user_id">ユーザーIDを入力してください</string>
+    <string name="app_hint_call_id">callidと入力願います</string>
     <string name="app_call_user_id">ユーザーIDを入力してください</string>
     <string name="app_btn_login">ログイン</string>
     <string name="app_welcome_tips">TRTCへようこそ</string>
@@ -41,9 +42,8 @@
     <string name="app_tuicallkit_support">TUICallKit はオフラインウェイクアップ機能もサポートし、Android、iOS、Web、ミニプログラム、Flutter、uni-app などの複数の開発プラットフォームをサポートします。</string>
     <string name="app_group_id">グループID</string>
     <string name="app_user_id_list">ユーザーIDリスト</string>
-    <string name="app_join_group_call">グループ通話に参加する</string>
+    <string name="app_join_group_call">通話に参加します</string>
     <string name="app_media_type">メディアタイプ</string>
-    <string name="app_group_call_button">グループ通話を体験する</string>
     <string name="app_basic_setting">基本設定</string>
     <string name="app_user_info">ユーザー情報</string>
     <string name="app_setting">設定</string>
@@ -73,6 +73,8 @@
     <string name="app_beauty_level">美顔のレベル</string>
     <string name="app_please_set_beauty_level">美顔のレベルを入力してください</string>
     <string name="app_1v1_call">1v1通話</string>
+    <string name="app_calls">マルチパーティ通話</string>
+
     <string name="app_nickname_colon">ニックネーム：</string>
     <string name="app_user_id_colon">ユーザーID：</string>
     <string name="app_group_call">グループ通話</string>
@@ -91,4 +93,5 @@
 
     <string name="app_version">バージョン：</string>
     <string name="app_not_setting">未設定</string>
+    <string name="app_optional_parameters">オプションパラメータ</string>
 </resources>

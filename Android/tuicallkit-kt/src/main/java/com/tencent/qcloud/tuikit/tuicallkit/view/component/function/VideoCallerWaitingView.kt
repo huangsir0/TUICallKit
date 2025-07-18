@@ -2,115 +2,165 @@ package com.tencent.qcloud.tuikit.tuicallkit.view.component.function
 
 import android.content.Context
 import android.view.LayoutInflater
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.view.View
+import android.widget.RelativeLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import com.tencent.qcloud.tuikit.TUICommonDefine
-import com.tencent.qcloud.tuikit.tuicallengine.impl.base.Observer
+import androidx.core.content.ContextCompat
+import com.tencent.cloud.tuikit.engine.common.TUICommonDefine
 import com.tencent.qcloud.tuikit.tuicallkit.R
-import com.tencent.qcloud.tuikit.tuicallkit.manager.EngineManager
-import com.tencent.qcloud.tuikit.tuicallkit.state.TUICallState
-import com.tencent.qcloud.tuikit.tuicallkit.view.component.videolayout.VideoViewFactory
-import com.tencent.qcloud.tuikit.tuicallkit.view.root.BaseCallView
+import com.tencent.qcloud.tuikit.tuicallkit.common.data.Constants
+import com.tencent.qcloud.tuikit.tuicallkit.manager.CallManager
+import com.tencent.qcloud.tuikit.tuicallkit.state.GlobalState
+import com.tencent.qcloud.tuikit.tuicallkit.view.component.videolayout.VideoFactory
+import com.trtc.tuikit.common.imageloader.ImageLoader
+import com.trtc.tuikit.common.livedata.Observer
+import com.trtc.tuikit.common.util.ScreenUtil
 
-class VideoCallerWaitingView(context: Context) : BaseCallView(context) {
-    private var layoutCancel: LinearLayout? = null
-    private var imageSwitchCamera: ImageView? = null
-    private var imageViewBlur: ImageView? = null
-    private var imageOpenCamera: ImageView? = null
-    private var layoutBlurBackground: LinearLayout? = null
-    private var textCamera: TextView? = null
-
-    private var enableBlurBackgroundObserver = Observer<Boolean> {
-        imageViewBlur?.isActivated = TUICallState.instance.enableBlurBackground.get()
-    }
+class VideoCallerWaitingView(context: Context) : RelativeLayout(context) {
+    private lateinit var buttonCancel: ControlButton
+    private lateinit var buttonSwitchCamera: ControlButton
+    private lateinit var buttonCamera: ControlButton
+    private lateinit var buttonBlurBackground: ControlButton
 
     private var isCameraOpenObserver = Observer<Boolean> {
-        imageOpenCamera?.isActivated = TUICallState.instance.isCameraOpen.get()
+        buttonCamera.imageView.isActivated = it
+    }
+    private var isVirtualBackgroundObserver = Observer<Boolean> {
+        buttonBlurBackground.imageView.isActivated = it
     }
 
-    init {
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        this.layoutParams?.width = LayoutParams.MATCH_PARENT
+        this.layoutParams?.height = LayoutParams.MATCH_PARENT
         initView()
-        TUICallState.instance.enableBlurBackground.observe(enableBlurBackgroundObserver)
-        TUICallState.instance.isCameraOpen.observe(isCameraOpenObserver)
+        registerObserver()
     }
 
-    override fun clear() {
-        TUICallState.instance.enableBlurBackground.removeObserver(enableBlurBackgroundObserver)
-        TUICallState.instance.isCameraOpen.removeObserver(isCameraOpenObserver)
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        unregisterObserver()
+    }
+
+    private fun registerObserver() {
+        CallManager.instance.viewState.isVirtualBackgroundOpened.observe(isVirtualBackgroundObserver)
+        CallManager.instance.mediaState.isCameraOpened.observe(isCameraOpenObserver)
+    }
+
+    private fun unregisterObserver() {
+        CallManager.instance.viewState.isVirtualBackgroundOpened.removeObserver(isVirtualBackgroundObserver)
+        CallManager.instance.mediaState.isCameraOpened.removeObserver(isCameraOpenObserver)
     }
 
     private fun initView() {
         LayoutInflater.from(context).inflate(R.layout.tuicallkit_function_view_video_inviting, this)
-        layoutCancel = findViewById(R.id.ll_cancel)
-        imageSwitchCamera = findViewById(R.id.img_switch_camera)
-        imageOpenCamera = findViewById(R.id.img_camera)
-        textCamera = findViewById(R.id.tv_camera)
-        layoutBlurBackground = findViewById(R.id.ll_blur)
-        imageViewBlur = findViewById(R.id.iv_video_blur)
+        buttonCancel = findViewById(R.id.cb_cancel)
+        buttonCamera = findViewById(R.id.cb_camera)
+        buttonSwitchCamera = findViewById(R.id.cb_switch_camera)
+        buttonBlurBackground = findViewById(R.id.cb_blur)
 
-        imageOpenCamera?.isActivated = TUICallState.instance.isCameraOpen.get()
+        val buttonSet = GlobalState.instance.disableControlButtonSet
+        buttonSwitchCamera.visibility = if (buttonSet.contains(Constants.ControlButton.SwitchCamera)) GONE else VISIBLE
+        buttonCamera.visibility = if (buttonSet.contains(Constants.ControlButton.Camera)) GONE else VISIBLE
 
-        if (!TUICallState.instance.showVirtualBackgroundButton) {
-            layoutBlurBackground?.visibility = GONE
-            reLayoutView()
+        buttonCamera.imageView.isActivated = CallManager.instance.mediaState.isCameraOpened.get()
+        if (!GlobalState.instance.enableVirtualBackground) {
+            buttonBlurBackground.visibility = GONE
+            buildRowConstraint()
         }
 
         initViewListener()
     }
 
-    private fun reLayoutView() {
-        val constraintLayout: ConstraintLayout = findViewById(R.id.constraint_layout)
-        val constraintSet: ConstraintSet = ConstraintSet()
-        constraintSet.clone(constraintLayout)
+    private fun buildRowConstraint() {
+        val disableButtonSet = GlobalState.instance.disableControlButtonSet
+        val buttonIds = mutableListOf<Int>().apply {
+            if (!disableButtonSet.contains(Constants.ControlButton.SwitchCamera)) {
+                add(buttonSwitchCamera.id)
+            }
+            add(buttonCancel.id)
+            if (!disableButtonSet.contains(Constants.ControlButton.Camera)) {
+                add(buttonCamera.id)
+            }
+        }
 
-        constraintSet.connect(R.id.ll_cancel, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
+        val rootView: ConstraintLayout = findViewById(R.id.constraint_layout)
+        val rowSet = ConstraintSet()
+        rowSet.clone(rootView)
 
-        constraintSet.connect(R.id.ll_switch, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
-        constraintSet.connect(R.id.ll_switch, ConstraintSet.END, R.id.ll_cancel, ConstraintSet.START)
-        constraintSet.connect(R.id.ll_switch, ConstraintSet.TOP, R.id.ll_cancel, ConstraintSet.TOP)
-        constraintSet.connect(R.id.ll_switch, ConstraintSet.BOTTOM, R.id.ll_cancel, ConstraintSet.BOTTOM)
-
-        constraintSet.connect(R.id.ll_camera, ConstraintSet.START, R.id.ll_cancel, ConstraintSet.END)
-        constraintSet.connect(R.id.ll_camera, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
-        constraintSet.connect(R.id.ll_camera, ConstraintSet.TOP, R.id.ll_cancel, ConstraintSet.TOP)
-        constraintSet.connect(R.id.ll_camera, ConstraintSet.BOTTOM, R.id.ll_cancel, ConstraintSet.BOTTOM)
-
-        constraintSet.applyTo(constraintLayout)
+        buttonIds.forEach {
+            rowSet.clear(it)
+            rowSet.setVisibility(it, View.VISIBLE)
+            rowSet.constrainWidth(it, ConstraintSet.WRAP_CONTENT)
+            rowSet.constrainHeight(it, ConstraintSet.WRAP_CONTENT)
+        }
+        if (buttonIds.size >= 2) {
+            rowSet.createHorizontalChainRtl(
+                ConstraintSet.PARENT_ID, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.END,
+                buttonIds.toIntArray(), null, ConstraintSet.CHAIN_SPREAD
+            )
+        } else {
+            rowSet.connect(buttonCancel.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+            rowSet.connect(buttonCancel.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        }
+        val margin = ScreenUtil.dip2px(20f)
+        buttonIds.forEach { id ->
+            rowSet.connect(id, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, margin)
+            rowSet.connect(id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, margin)
+        }
+        rowSet.applyTo(rootView)
     }
 
     private fun initViewListener() {
-        layoutCancel?.setOnClickListener { EngineManager.instance.hangup(null) }
-        imageSwitchCamera!!.setOnClickListener {
+        buttonCancel.setOnClickListener {
+            buttonCancel.imageView.roundPercent = 1.0f
+            buttonCancel.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.tuicallkit_button_bg_red))
+            ImageLoader.loadGif(context, buttonCancel.imageView, R.drawable.tuicallkit_hangup_loading)
+            disableButton(buttonCamera)
+            disableButton(buttonSwitchCamera)
+            disableButton(buttonBlurBackground)
+            CallManager.instance.hangup(null)
+        }
+        buttonSwitchCamera.setOnClickListener {
+            if (!buttonSwitchCamera.isEnabled) {
+                return@setOnClickListener
+            }
             var camera = TUICommonDefine.Camera.Back
-            if (TUICallState.instance.isFrontCamera.get() == TUICommonDefine.Camera.Back) {
+            if (CallManager.instance.mediaState.isFrontCamera.get() == TUICommonDefine.Camera.Back) {
                 camera = TUICommonDefine.Camera.Front
             }
-            EngineManager.instance.switchCamera(camera)
+            CallManager.instance.switchCamera(camera)
         }
-        imageOpenCamera?.setOnClickListener {
-            if (TUICallState.instance.isCameraOpen.get()) {
-                EngineManager.instance.closeCamera()
+        buttonCamera.setOnClickListener {
+            if (!buttonCamera.isEnabled) {
+                return@setOnClickListener
+            }
+            val isCameraOpened = CallManager.instance.mediaState.isCameraOpened.get()
+            buttonCamera.imageView.isActivated = !isCameraOpened
+            buttonSwitchCamera.imageView.isActivated = !isCameraOpened
+            buttonBlurBackground.imageView.isActivated = !isCameraOpened
 
-                imageOpenCamera?.setImageResource(R.drawable.tuicallkit_ic_camera_disable)
-                textCamera?.text = context.resources.getString(R.string.tuicallkit_toast_disable_camera)
-                imageSwitchCamera?.isEnabled = false
-                layoutBlurBackground?.isEnabled = false
+            if (isCameraOpened) {
+                CallManager.instance.closeCamera()
+                buttonCamera.textView.text = context.resources.getString(R.string.tuicallkit_toast_disable_camera)
             } else {
-                val camera = TUICallState.instance.isFrontCamera.get()
-                val videoView = VideoViewFactory.instance.findVideoView(TUICallState.instance.selfUser.get().id)
-                EngineManager.instance.openCamera(camera, videoView?.getVideoView(), null)
-
-                imageOpenCamera?.setImageResource(R.drawable.tuicallkit_ic_camera_enable)
-                textCamera?.text = context.resources.getString(R.string.tuicallkit_toast_enable_camera)
-                imageSwitchCamera?.isEnabled = true
-                layoutBlurBackground?.isEnabled = true
+                val camera = CallManager.instance.mediaState.isFrontCamera.get()
+                val videoView = VideoFactory.instance.findVideoView(CallManager.instance.userState.selfUser.get().id)
+                CallManager.instance.openCamera(camera, videoView, null)
+                buttonCamera.textView.text = context.resources.getString(R.string.tuicallkit_toast_enable_camera)
             }
         }
-        layoutBlurBackground?.setOnClickListener {
-            EngineManager.instance.setBlurBackground(!TUICallState.instance.enableBlurBackground.get())
+        buttonBlurBackground.setOnClickListener {
+            if (!buttonBlurBackground.isEnabled) {
+                return@setOnClickListener
+            }
+            CallManager.instance.setBlurBackground(!CallManager.instance.viewState.isVirtualBackgroundOpened.get())
         }
+    }
+
+    private fun disableButton(button: View) {
+        button.isEnabled = false
+        button.alpha = 0.8f
     }
 }

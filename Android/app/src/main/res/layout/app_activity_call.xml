@@ -16,7 +16,7 @@
             android:layout_width="30dp"
             android:layout_height="38dp"
             android:layout_centerVertical="true"
-            android:layout_marginLeft="12dp"
+            android:layout_marginStart="12dp"
             android:gravity="center_vertical"
             android:padding="10dp"
             android:src="@drawable/app_back" />
@@ -28,7 +28,7 @@
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
             android:text="@string/app_1v1_call"
-            android:textColor="#000000"
+            android:textColor="@color/app_color_black"
             android:textSize="16sp"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -37,13 +37,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="38dp"
-        android:layout_marginRight="16dp">
+        android:layout_marginEnd="16dp">
 
         <TextView
             android:id="@+id/tv_call_user_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="22dp"
+            android:layout_marginStart="22dp"
             android:text="@string/app_user_id"
             android:textColor="@color/app_color_black"
             android:textSize="16sp" />
@@ -52,15 +52,15 @@
             android:id="@+id/et_userId"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:layout_marginStart="4dp"
             android:layout_toEndOf="@+id/tv_call_user_label"
             android:background="@null"
-            android:gravity="right"
+            android:gravity="end"
             android:hint="@string/app_call_user_id"
             android:maxLines="1"
             android:singleLine="true"
-            android:textColor="#000000"
+            android:textColor="@color/app_color_black"
             android:textColorHint="#ACB6C5"
             android:textSize="16sp" />
     </RelativeLayout>
@@ -74,7 +74,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="22dp"
+            android:layout_marginStart="22dp"
             android:text="@string/app_media_type"
             android:textColor="@color/app_color_black"
             android:textSize="16sp" />
@@ -83,18 +83,18 @@
             android:id="@+id/rg_media_type"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_marginRight="16dp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="16dp"
             android:orientation="horizontal">
 
             <RadioButton
                 android:id="@+id/rb_video"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="10dp"
+                android:layout_marginStart="10dp"
                 android:background="@null"
                 android:button="@drawable/app_bg_rb_selector"
-                android:drawableLeft="@drawable/app_bg_rb_selector"
+                android:drawableStart="@drawable/app_bg_rb_selector"
                 android:drawablePadding="5dp"
                 android:gravity="center"
                 android:text="@string/app_video_call"
@@ -105,11 +105,11 @@
                 android:id="@+id/rb_audio"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="15dp"
+                android:layout_marginStart="15dp"
                 android:background="@null"
                 android:button="@drawable/app_bg_rb_selector"
                 android:checked="true"
-                android:drawableLeft="@drawable/app_bg_rb_selector"
+                android:drawableStart="@drawable/app_bg_rb_selector"
                 android:drawablePadding="5dp"
                 android:gravity="center"
                 android:text="@string/app_audio_call"
@@ -138,7 +138,7 @@
         <ImageView
             android:layout_width="5.3dp"
             android:layout_height="9dp"
-            android:layout_marginLeft="9.5dp"
+            android:layout_marginStart="9.5dp"
             android:background="@drawable/app_right" />
 
     </LinearLayout>
@@ -152,8 +152,8 @@
         android:id="@+id/btn_call"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="14dp"
-        android:layout_marginRight="14dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
         android:layout_marginBottom="46dp"
         android:background="@drawable/app_bg_button"
         android:text="@string/app_start_call"

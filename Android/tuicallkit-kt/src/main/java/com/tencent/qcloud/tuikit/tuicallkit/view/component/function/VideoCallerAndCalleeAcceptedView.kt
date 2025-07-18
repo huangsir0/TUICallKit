@@ -2,230 +2,317 @@ package com.tencent.qcloud.tuikit.tuicallkit.view.component.function
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
-import android.widget.TextView
-import androidx.constraintlayout.motion.widget.MotionLayout
-import com.tencent.qcloud.tuikit.TUICommonDefine
-import com.tencent.qcloud.tuikit.tuicallengine.TUICallDefine
-import com.tencent.qcloud.tuikit.tuicallengine.impl.base.Observer
+import android.widget.RelativeLayout
+import androidx.constraintlayout.utils.widget.ImageFilterView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.ContextCompat
+import androidx.transition.ChangeBounds
+import androidx.transition.TransitionManager
+import com.tencent.cloud.tuikit.engine.call.TUICallDefine
+import com.tencent.cloud.tuikit.engine.common.TUICommonDefine
+import com.tencent.cloud.tuikit.engine.common.TUICommonDefine.AudioPlaybackDevice
 import com.tencent.qcloud.tuikit.tuicallkit.R
-import com.tencent.qcloud.tuikit.tuicallkit.manager.EngineManager
-import com.tencent.qcloud.tuikit.tuicallkit.state.TUICallState
-import com.tencent.qcloud.tuikit.tuicallkit.view.component.videolayout.VideoViewFactory
-import com.tencent.qcloud.tuikit.tuicallkit.view.root.BaseCallView
+import com.tencent.qcloud.tuikit.tuicallkit.common.data.Constants
+import com.tencent.qcloud.tuikit.tuicallkit.manager.CallManager
+import com.tencent.qcloud.tuikit.tuicallkit.state.GlobalState
+import com.tencent.qcloud.tuikit.tuicallkit.view.component.videolayout.VideoFactory
+import com.trtc.tuikit.common.imageloader.ImageLoader
+import com.trtc.tuikit.common.livedata.Observer
+import com.trtc.tuikit.common.util.ScreenUtil
 
-class VideoCallerAndCalleeAcceptedView(context: Context) : BaseCallView(context) {
-    private var rootLayout: MotionLayout? = null
-    private var imageOpenCamera: ImageView? = null
-    private var imageMute: ImageView? = null
-    private var imageAudioDevice: ImageView? = null
-    private var imageHangup: ImageView? = null
-    private var imageSwitchCamera: ImageView? = null
-    private var imageExpandView: ImageView? = null
-    private var imageBlurBackground: ImageView? = null
-    private var textMute: TextView? = null
-    private var textAudioDevice: TextView? = null
-    private var textCamera: TextView? = null
+class VideoCallerAndCalleeAcceptedView(context: Context) : RelativeLayout(context) {
+    private lateinit var rootView: ConstraintLayout
+    private lateinit var imageHangup: ImageFilterView
+    private lateinit var imageSwitchCamera: ImageView
+    private lateinit var imageExpandView: ImageView
+    private lateinit var imageBlurBackground: ImageView
+
+    private lateinit var buttonMicrophone: ControlButton
+    private lateinit var buttonAudioDevice: ControlButton
+    private lateinit var buttonCamera: ControlButton
+
+    private var isBottomViewExpand: Boolean = true
+    private var enableTransition: Boolean = false
+    private val originalSet = ConstraintSet()
+    private val rowSet = ConstraintSet()
 
     private var isCameraOpenObserver = Observer<Boolean> {
-        imageOpenCamera?.isActivated = it
-        textCamera?.text = if (it) {
-            context.getString(R.string.tuicallkit_toast_enable_camera)
-        } else {
-            context.getString(R.string.tuicallkit_toast_disable_camera)
+        buttonCamera.imageView.isActivated = it
+        buttonCamera.textView.text = when {
+            it -> context.getString(R.string.tuicallkit_toast_enable_camera)
+            else -> context.getString(R.string.tuicallkit_toast_disable_camera)
         }
 
-        if (it && TUICallState.instance.scene.get() == TUICallDefine.Scene.SINGLE_CALL) {
-            refreshButton(R.id.iv_function_switch_camera, VISIBLE)
-            refreshButton(
-                R.id.img_blur_background, if (TUICallState.instance.showVirtualBackgroundButton) VISIBLE else GONE
-            )
-        } else {
-            refreshButton(R.id.iv_function_switch_camera, GONE)
-            refreshButton(R.id.img_blur_background, GONE)
+        showSwitchCamera(it)
+        showBlurBackground(it)
+    }
+
+    private fun showSwitchCamera(show: Boolean) {
+        if (GlobalState.instance.disableControlButtonSet.contains(Constants.ControlButton.SwitchCamera)
+            || CallManager.instance.callState.scene.get() != TUICallDefine.Scene.SINGLE_CALL) {
+            imageSwitchCamera.visibility = GONE
+            return
         }
+        imageSwitchCamera.visibility = if (show) VISIBLE else GONE
     }
 
-    private fun refreshButton(resId: Int, enable: Int) {
-        rootLayout?.getConstraintSet(R.id.start)?.getConstraint(resId)?.propertySet?.visibility = enable
-        rootLayout?.getConstraintSet(R.id.end)?.getConstraint(resId)?.propertySet?.visibility = enable
+    private fun showBlurBackground(show: Boolean) {
+        if (!GlobalState.instance.enableVirtualBackground
+            || CallManager.instance.callState.scene.get() != TUICallDefine.Scene.SINGLE_CALL) {
+            imageBlurBackground.visibility = GONE
+            return
+        }
+        imageBlurBackground.visibility = if (show) VISIBLE else GONE
     }
 
-    private var isMicMuteObserver = Observer<Boolean> {
-        imageMute?.isActivated = it
+    private val isMicOpenObserver = Observer<Boolean> {
+        val resId = if (it) {
+            R.string.tuicallkit_toast_enable_mute
+        } else {
+            R.string.tuicallkit_toast_disable_mute
+        }
+        buttonMicrophone.textView.text = context.getString(resId)
+        buttonMicrophone.imageView.isActivated = it
     }
 
-    private var isSpeakerObserver = Observer<TUICommonDefine.AudioPlaybackDevice> {
-        imageAudioDevice?.isActivated = it == TUICommonDefine.AudioPlaybackDevice.Speakerphone
+    private val showLargeViewUserObserver = Observer<String> {
+        startAnimation(it.isNullOrEmpty())
+        enableTransition = true
     }
 
-    private val isBottomViewExpandedObserver = Observer<Boolean> {
-        updateView(it)
-        enableSwipeFunctionView(true)
-    }
-
-    init {
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        this.layoutParams?.width = LayoutParams.MATCH_PARENT
+        this.layoutParams?.height = LayoutParams.MATCH_PARENT
+        enableTransition = false
         initView()
-
-        addObserver()
+        registerObserver()
+        initViewListener()
     }
 
-    override fun clear() {
-        removeObserver()
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        unregisterObserver()
     }
 
-    private fun addObserver() {
-        TUICallState.instance.isCameraOpen.observe(isCameraOpenObserver)
-        TUICallState.instance.isMicrophoneMute.observe(isMicMuteObserver)
-        TUICallState.instance.audioPlayoutDevice.observe(isSpeakerObserver)
-        TUICallState.instance.isBottomViewExpand.observe(isBottomViewExpandedObserver)
+    private fun registerObserver() {
+        CallManager.instance.mediaState.isCameraOpened.observe(isCameraOpenObserver)
+        CallManager.instance.mediaState.isMicrophoneMuted.observe(isMicOpenObserver)
+        CallManager.instance.viewState.showLargeViewUserId.observe(showLargeViewUserObserver)
     }
 
-    private fun removeObserver() {
-        TUICallState.instance.isCameraOpen.removeObserver(isCameraOpenObserver)
-        TUICallState.instance.isMicrophoneMute.removeObserver(isMicMuteObserver)
-        TUICallState.instance.audioPlayoutDevice.removeObserver(isSpeakerObserver)
-        TUICallState.instance.isBottomViewExpand.removeObserver(isBottomViewExpandedObserver)
+    private fun unregisterObserver() {
+        CallManager.instance.mediaState.isCameraOpened.removeObserver(isCameraOpenObserver)
+        CallManager.instance.mediaState.isMicrophoneMuted.removeObserver(isMicOpenObserver)
+        CallManager.instance.viewState.showLargeViewUserId.removeObserver(showLargeViewUserObserver)
     }
 
     private fun initView() {
         LayoutInflater.from(context).inflate(R.layout.tuicallkit_function_view_video, this)
-        rootLayout = findViewById(R.id.cl_view_video)
-        imageMute = findViewById(R.id.iv_mute)
-        textMute = findViewById(R.id.tv_mic)
-        imageAudioDevice = findViewById(R.id.iv_speaker)
-        textAudioDevice = findViewById(R.id.tv_speaker)
-        imageOpenCamera = findViewById(R.id.iv_camera)
+        rootView = findViewById(R.id.cl_view_video)
+        buttonMicrophone = findViewById(R.id.cb_microphone)
+        buttonAudioDevice = findViewById(R.id.cb_speaker)
+        buttonCamera = findViewById(R.id.cb_open_camera)
+
         imageHangup = findViewById(R.id.iv_hang_up)
-        textCamera = findViewById(R.id.tv_video_camera)
         imageSwitchCamera = findViewById(R.id.iv_function_switch_camera)
         imageBlurBackground = findViewById(R.id.img_blur_background)
         imageExpandView = findViewById(R.id.iv_expanded)
-        imageExpandView?.visibility = INVISIBLE
 
-        imageOpenCamera?.isActivated = TUICallState.instance.isCameraOpen.get() == true
-        imageMute?.isActivated = TUICallState.instance.isMicrophoneMute.get() == true
-        imageAudioDevice?.isActivated =
-            TUICallState.instance.audioPlayoutDevice.get() == TUICommonDefine.AudioPlaybackDevice.Speakerphone
+        val isMute = CallManager.instance.mediaState.isMicrophoneMuted.get()
+        buttonMicrophone.imageView.isActivated = isMute
+        val micResId = if (isMute) R.string.tuicallkit_toast_disable_mute else R.string.tuicallkit_toast_enable_mute
+        buttonMicrophone.textView.text = context.getString(micResId)
 
-        textCamera?.text = if (TUICallState.instance.isCameraOpen.get()) {
-            context.getString(R.string.tuicallkit_toast_enable_camera)
-        } else {
-            context.getString(R.string.tuicallkit_toast_disable_camera)
+        val isSpeaker = CallManager.instance.mediaState.audioPlayoutDevice.get() == AudioPlaybackDevice.Speakerphone
+        val speakerResId = if (isSpeaker) R.string.tuicallkit_toast_speaker else R.string.tuicallkit_toast_use_earpiece
+        buttonAudioDevice.imageView.isActivated = isSpeaker
+        buttonAudioDevice.textView.text = context.getString(speakerResId)
+
+        val buttonSet = GlobalState.instance.disableControlButtonSet
+        buttonMicrophone.visibility = if (buttonSet.contains(Constants.ControlButton.Microphone)) GONE else VISIBLE
+        buttonAudioDevice.visibility =
+            if (buttonSet.contains(Constants.ControlButton.AudioPlaybackDevice)) GONE else VISIBLE
+        buttonCamera.visibility = if (buttonSet.contains(Constants.ControlButton.Camera)) GONE else VISIBLE
+
+        val isCameraOpened = CallManager.instance.mediaState.isCameraOpened.get()
+        showSwitchCamera(isCameraOpened)
+        showBlurBackground(isCameraOpened)
+
+        imageExpandView.visibility = if (enableTransition) View.VISIBLE else View.GONE
+
+        originalSet.clone(rootView)
+        rowSet.clone(rootView)
+        buildRowConstraint(rowSet)
+
+        if (!CallManager.instance.viewState.showLargeViewUserId.get().isNullOrEmpty()) {
+            startAnimation(false)
         }
-
-        if (TUICallState.instance.audioPlayoutDevice.get() == TUICommonDefine.AudioPlaybackDevice.Speakerphone) {
-            textAudioDevice?.text = context.getString(R.string.tuicallkit_toast_speaker)
-        } else {
-            textAudioDevice?.text = context.getString(R.string.tuicallkit_toast_use_earpiece)
-        }
-
-        if (TUICallState.instance.scene.get() == TUICallDefine.Scene.SINGLE_CALL
-            && TUICallState.instance.isCameraOpen.get()
-        ) {
-            imageSwitchCamera?.visibility = VISIBLE
-            imageBlurBackground?.visibility = if (TUICallState.instance.showVirtualBackgroundButton) VISIBLE else GONE
-        } else {
-            imageSwitchCamera?.visibility = GONE
-            imageBlurBackground?.visibility = GONE
-        }
-
-        if (!TUICallState.instance.isBottomViewExpand.get() && TUICallState.instance.showLargeViewUserId.get() != null) {
-            TUICallState.instance.isBottomViewExpand.set(!TUICallState.instance.isBottomViewExpand.get())
-        }
-        initViewListener()
-        enableSwipeFunctionView(false)
-    }
-
-    private fun enableSwipeFunctionView(enable: Boolean) {
-        if (TUICallState.instance.scene.get() == TUICallDefine.Scene.SINGLE_CALL) {
-            rootLayout?.enableTransition(R.id.video_function_view_transition, false)
-            return
-        }
-        rootLayout?.enableTransition(R.id.video_function_view_transition, enable)
     }
 
     private fun initViewListener() {
-        imageMute?.setOnClickListener {
-            val resId = if (TUICallState.instance.isMicrophoneMute.get() == true) {
-                EngineManager.instance.openMicrophone(null)
-                R.string.tuicallkit_toast_disable_mute
-            } else {
-                EngineManager.instance.closeMicrophone()
-                R.string.tuicallkit_toast_enable_mute
+        buttonMicrophone.setOnClickListener {
+            if (!buttonMicrophone.isEnabled) {
+                return@setOnClickListener
             }
-            textMute?.text = context.getString(resId)
-        }
-        imageAudioDevice?.setOnClickListener {
-            var resId: Int
-            if (TUICallState.instance.audioPlayoutDevice.get() == TUICommonDefine.AudioPlaybackDevice.Speakerphone) {
-                EngineManager.instance.selectAudioPlaybackDevice(TUICommonDefine.AudioPlaybackDevice.Earpiece)
-                resId = R.string.tuicallkit_toast_use_earpiece
+            if (CallManager.instance.mediaState.isMicrophoneMuted.get()) {
+                CallManager.instance.openMicrophone(null)
             } else {
-                EngineManager.instance.selectAudioPlaybackDevice(TUICommonDefine.AudioPlaybackDevice.Speakerphone)
-                resId = R.string.tuicallkit_toast_speaker
+                CallManager.instance.closeMicrophone()
             }
-            textAudioDevice?.text = context.getString(resId)
         }
-        imageOpenCamera?.setOnClickListener {
-            if (TUICallState.instance.isCameraOpen.get() == true) {
-                EngineManager.instance.closeCamera()
+        buttonAudioDevice.setOnClickListener {
+            if (!buttonAudioDevice.isEnabled) {
+                return@setOnClickListener
+            }
+            val device =
+                if (CallManager.instance.mediaState.audioPlayoutDevice.get() == AudioPlaybackDevice.Speakerphone) {
+                    AudioPlaybackDevice.Earpiece
+                } else {
+                    AudioPlaybackDevice.Speakerphone
+                }
+            val resId = if (device == AudioPlaybackDevice.Speakerphone) {
+                R.string.tuicallkit_toast_speaker
             } else {
-                var camera: TUICommonDefine.Camera = TUICallState.instance.isFrontCamera.get()
-                val videoView = VideoViewFactory.instance.findVideoView(TUICallState.instance.selfUser.get().id)
-                EngineManager.instance.openCamera(camera, videoView?.getVideoView(), null)
+                R.string.tuicallkit_toast_use_earpiece
+            }
 
-                if (TUICallState.instance.scene.get() == TUICallDefine.Scene.GROUP_CALL) {
-                    if (TUICallState.instance.showLargeViewUserId.get() != TUICallState.instance.selfUser.get().id) {
-                        TUICallState.instance.showLargeViewUserId.set(TUICallState.instance.selfUser.get().id)
+            CallManager.instance.selectAudioPlaybackDevice(device)
+            buttonAudioDevice.textView.text = context.getString(resId)
+            buttonAudioDevice.imageView.isActivated = device == AudioPlaybackDevice.Speakerphone
+        }
+        buttonCamera.setOnClickListener {
+            if (!buttonCamera.isEnabled) {
+                return@setOnClickListener
+            }
+            if (CallManager.instance.mediaState.isCameraOpened.get()) {
+                CallManager.instance.closeCamera()
+            } else {
+                val selfUser = CallManager.instance.userState.selfUser.get()
+                val camera: TUICommonDefine.Camera = CallManager.instance.mediaState.isFrontCamera.get()
+                val videoView = VideoFactory.instance.findVideoView(selfUser.id)
+
+                CallManager.instance.openCamera(camera, videoView, null)
+                if (CallManager.instance.callState.scene.get() != TUICallDefine.Scene.SINGLE_CALL) {
+                    if (CallManager.instance.viewState.showLargeViewUserId.get() != selfUser.id) {
+                        CallManager.instance.viewState.showLargeViewUserId.set(selfUser.id)
                     }
                 }
             }
         }
 
-        imageHangup?.setOnClickListener { EngineManager.instance.hangup(null) }
+        imageHangup.setOnClickListener {
+            imageHangup.roundPercent = 1.0f
+            imageHangup.setBackgroundColor(ContextCompat.getColor(context, R.color.tuicallkit_button_bg_red))
+            ImageLoader.loadGif(context, imageHangup, R.drawable.tuicallkit_hangup_loading)
 
-        imageExpandView?.setOnClickListener() {
-            TUICallState.instance.isBottomViewExpand.set(!TUICallState.instance.isBottomViewExpand.get())
+            disableButton(buttonMicrophone)
+            disableButton(buttonAudioDevice)
+            disableButton(buttonCamera)
+            disableButton(imageSwitchCamera)
+            disableButton(imageBlurBackground)
+
+            CallManager.instance.hangup(null)
         }
 
-        imageBlurBackground?.setOnClickListener {
-            EngineManager.instance.setBlurBackground(!TUICallState.instance.enableBlurBackground.get())
+        imageExpandView.setOnClickListener() {
+            startAnimation(!isBottomViewExpand)
         }
 
-        imageSwitchCamera?.setOnClickListener() {
+        imageBlurBackground.setOnClickListener {
+            if (!imageBlurBackground.isEnabled) {
+                return@setOnClickListener
+            }
+            CallManager.instance.setBlurBackground(!CallManager.instance.viewState.isVirtualBackgroundOpened.get())
+        }
+
+        imageSwitchCamera.setOnClickListener() {
+            if (!imageSwitchCamera.isEnabled) {
+                return@setOnClickListener
+            }
             var camera = TUICommonDefine.Camera.Back
-            if (TUICallState.instance.isFrontCamera.get() == TUICommonDefine.Camera.Back) {
+            if (CallManager.instance.mediaState.isFrontCamera.get() == TUICommonDefine.Camera.Back) {
                 camera = TUICommonDefine.Camera.Front
             }
-            EngineManager.instance.switchCamera(camera)
+            CallManager.instance.switchCamera(camera)
         }
-
-        rootLayout?.addTransitionListener(object : MotionLayout.TransitionListener {
-            override fun onTransitionStarted(motionLayout: MotionLayout, startId: Int, endId: Int) {
-                rootLayout?.background = context.resources.getDrawable(R.drawable.tuicallkit_bg_group_call_bottom)
-            }
-
-            override fun onTransitionChange(motionLayout: MotionLayout, startId: Int, endId: Int, progress: Float) {}
-
-            override fun onTransitionCompleted(motionLayout: MotionLayout, currentId: Int) {
-                rootLayout?.getConstraintSet(R.id.start)?.getConstraint(R.id.iv_expanded)?.propertySet?.visibility =
-                    VISIBLE
-            }
-
-            override fun onTransitionTrigger(motionLayout: MotionLayout, id: Int, positive: Boolean, progress: Float) {}
-        })
     }
 
-    private fun updateView(isExpand: Boolean) {
-        if (TUICallState.instance.scene?.get() == TUICallDefine.Scene.SINGLE_CALL) {
+    private fun disableButton(button: View) {
+        button.isEnabled = false
+        button.alpha = 0.8f
+    }
+
+    private fun startAnimation(isExpand: Boolean) {
+        if (CallManager.instance.callState.scene.get() == TUICallDefine.Scene.SINGLE_CALL) {
             return
         }
-        if (isExpand) {
-            rootLayout?.transitionToStart()
-            rootLayout?.getConstraintSet(R.id.start)?.getConstraint(R.id.iv_expanded)?.propertySet?.visibility = VISIBLE
-        } else {
-            rootLayout?.transitionToEnd()
+        rootView.background = ContextCompat.getDrawable(context, R.drawable.tuicallkit_bg_group_call_bottom)
+        if (!enableTransition) {
+            return
         }
+        if (isExpand == isBottomViewExpand) {
+            return
+        }
+        isBottomViewExpand = isExpand
+
+        val transition = ChangeBounds().apply { duration = 300 }
+        TransitionManager.beginDelayedTransition(rootView, transition)
+        if (isExpand) {
+            originalSet.applyTo(rootView)
+        } else {
+            rowSet.applyTo(rootView)
+            imageExpandView.rotation = 180f
+        }
+        imageExpandView.visibility = if (enableTransition) View.VISIBLE else View.GONE
+        setControlButtonTextVisible(isExpand)
+    }
+
+    private fun setControlButtonTextVisible(visible: Boolean) {
+        val buttonSet = GlobalState.instance.disableControlButtonSet
+        buttonMicrophone.textView.visibility =
+            if (visible && !buttonSet.contains(Constants.ControlButton.Microphone)) View.VISIBLE else View.GONE
+        buttonAudioDevice.textView.visibility =
+            if (visible && !buttonSet.contains(Constants.ControlButton.AudioPlaybackDevice)) View.VISIBLE else View.GONE
+        buttonCamera.textView.visibility =
+            if (visible && !buttonSet.contains(Constants.ControlButton.Camera)) View.VISIBLE else View.GONE
+    }
+
+    private fun buildRowConstraint(set: ConstraintSet) {
+        val disableButtonSet = GlobalState.instance.disableControlButtonSet
+
+        val buttonIds = mutableListOf(imageExpandView.id).apply {
+            if (!disableButtonSet.contains(Constants.ControlButton.Microphone)) {
+                add(buttonMicrophone.id)
+            }
+            if (!disableButtonSet.contains(Constants.ControlButton.AudioPlaybackDevice)) {
+                add(buttonAudioDevice.id)
+            }
+            if (!disableButtonSet.contains(Constants.ControlButton.Camera)) {
+                add(buttonCamera.id)
+            }
+            add(imageHangup.id)
+        }
+
+        buttonIds.forEach {
+            set.clear(it)
+            set.setVisibility(it, View.VISIBLE)
+            set.constrainWidth(it, ConstraintSet.WRAP_CONTENT)
+            set.constrainHeight(it, ConstraintSet.WRAP_CONTENT)
+        }
+        set.createHorizontalChainRtl(
+            ConstraintSet.PARENT_ID, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.END,
+            buttonIds.toIntArray(), null, ConstraintSet.CHAIN_SPREAD
+        )
+        val margin = ScreenUtil.dip2px(20f)
+        buttonIds.forEach {
+            set.connect(it, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, margin)
+            set.connect(it, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, margin)
+        }
+        set.setMargin(imageExpandView.id, ConstraintSet.START, margin)
+        set.setMargin(imageHangup.id, ConstraintSet.END, margin)
     }
 }

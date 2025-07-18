@@ -2,14 +2,17 @@ package com.tencent.cloud.tuikit.flutter.tuicallkit.state;
 
 import androidx.annotation.NonNull;
 
-import com.tencent.qcloud.tuikit.tuicallengine.TUICallDefine;
+import com.tencent.cloud.tuikit.engine.call.TUICallDefine;
+
+import java.util.Objects;
 
 public class User {
     public String               id             = "";
     public String               avatar         = "";
-    public String               nickname       = "";
-    public TUICallDefine.Role   callRole       = TUICallDefine.Role.Caller;
-    public TUICallDefine.Status callStatus     = TUICallDefine.Status.None;
+    public String               remark         = "";
+    public String               nickname   = "";
+    public TUICallDefine.Role   callRole   = TUICallDefine.Role.Caller;
+    public TUICallDefine.Status callStatus = TUICallDefine.Status.None;
     public boolean              audioAvailable = false;
     public boolean              videoAvailable = false;
     public int                  playoutVolume  = 0;
@@ -26,6 +29,16 @@ public class User {
             return false;
         }
         return true;
+    }
+
+    public String getUserDisplayName() {
+        if (!Objects.equals(remark, "")) {
+            return remark;
+        }
+        if (!Objects.equals(nickname, "")) {
+            return nickname;
+        }
+        return id;
     }
 
     @NonNull
