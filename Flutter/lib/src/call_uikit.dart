@@ -108,6 +108,14 @@ class TUICallKit {
     return await CallManager.instance.setCallingBell(assetName);
   }
 
+  Future<void> setCallingBellBy(String filePath) async {
+    return await CallManager.instance.setCallingBellBy(filePath);
+  }
+
+  Future<void> setCallingBellForUserBy(String userId, String filePath) async {
+    return await CallManager.instance.setCallingBellForUserBy(userId, filePath);
+  }
+
   ///Enable the mute mode (the callee doesn't ring)
   Future<void> enableMuteMode(bool enable) async {
     return await CallManager.instance.enableMuteMode(enable);

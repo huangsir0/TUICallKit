@@ -20,7 +20,21 @@ class CallingBellFeature {
 
   static Future<void> startRing() async {
     TRTCLogger.info('CallingBellFeature startRing');
-    String filePath = await PreferenceUtils.getInstance().getString(keyRingPath);
+
+    ////////////// 获取为特定用户自定义的铃声 //////////////
+    final scene = CallState.instance.scene;
+    String calleeId = '';
+    if (scene == TUICallScene.singleCall) {
+      try {
+        calleeId = CallState.instance.calleeIdList.first;
+      } catch (_) {}
+    }
+    String filePath = await PreferenceUtils.getInstance().getString(keyRingPath + (calleeId.isNotEmpty ? '_$calleeId' : ''));
+    if (filePath.isEmpty) {
+      filePath = await PreferenceUtils.getInstance().getString(keyRingPath);
+    }
+    ////////////// 获取为特定用户自定义的铃声 //////////////
+    
     if (filePath.isNotEmpty &&
         TUICallRole.called == CallState.instance.selfUser.callRole &&
         !CallState.instance.enableMuteMode) {

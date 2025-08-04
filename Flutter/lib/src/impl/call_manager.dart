@@ -646,6 +646,14 @@ class CallManager {
     PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
   }
 
+  Future<void> setCallingBellBy(String filePath) async {
+    PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
+  }
+
+  Future<void> setCallingBellForUserBy(String userId, String filePath) async {
+    PreferenceUtils.getInstance().saveString('${CallingBellFeature.keyRingPath}_$userId', filePath);
+  }
+
   Future<void> enableFloatWindow(bool enable) async {
     CallState.instance.enableFloatWindow = enable;
   }
