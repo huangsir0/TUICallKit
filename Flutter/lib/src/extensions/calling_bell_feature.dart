@@ -23,13 +23,13 @@ class CallingBellFeature {
 
     ////////////// 获取为特定用户自定义的铃声 //////////////
     final scene = CallState.instance.scene;
-    String calleeId = '';
+    String callerId = '';
     if (scene == TUICallScene.singleCall) {
       try {
-        calleeId = CallState.instance.calleeIdList.first;
+        callerId = CallState.instance.caller.id;
       } catch (_) {}
     }
-    String filePath = await PreferenceUtils.getInstance().getString(keyRingPath + (calleeId.isNotEmpty ? '_$calleeId' : ''));
+    String filePath = await PreferenceUtils.getInstance().getString(keyRingPath + (callerId.isNotEmpty ? '_$callerId' : ''));
     if (filePath.isEmpty) {
       filePath = await PreferenceUtils.getInstance().getString(keyRingPath);
     }
