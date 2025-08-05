@@ -646,11 +646,11 @@ class CallManager {
     PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
   }
 
-  Future<void> setCallingBellBy(String filePath) async {
+  Future<void> setCallingBellWith(String filePath) async {
     PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
   }
 
-  Future<void> setCallingBellForUserBy(String userId, String filePath) async {
+  Future<void> setCallingBellForUserWith(String userId, String filePath) async {
     PreferenceUtils.getInstance().saveString('${CallingBellFeature.keyRingPath}_$userId', filePath);
   }
 
