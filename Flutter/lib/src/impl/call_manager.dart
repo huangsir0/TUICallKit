@@ -646,13 +646,23 @@ class CallManager {
     PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
   }
 
+  //////////////// 新增：自定义铃声 ////////////////
   void setCallingBellWith(String filePath) {
     PreferenceUtils.getInstance().saveString(CallingBellFeature.keyRingPath, filePath);
+  }
+
+  Future<String> getCallingBell() async {
+    return PreferenceUtils.getInstance().getString(CallingBellFeature.keyRingPath);
   }
 
   void setCallingBellForUserWith(String userId, String filePath) {
     PreferenceUtils.getInstance().saveString('${CallingBellFeature.keyRingPath}_$userId', filePath);
   }
+
+  Future<String> getCallingBellWith(String userId) async {
+    return PreferenceUtils.getInstance().getString('${CallingBellFeature.keyRingPath}_$userId');
+  }
+  //////////////// 新增：自定义铃声 ////////////////
 
   Future<void> enableFloatWindow(bool enable) async {
     CallState.instance.enableFloatWindow = enable;

@@ -108,13 +108,23 @@ class TUICallKit {
     return await CallManager.instance.setCallingBell(assetName);
   }
 
+  //////////////// 新增：自定义铃声 ////////////////
   void setCallingBellWith(String filePath) {
     CallManager.instance.setCallingBellWith(filePath);
+  }
+
+  Future<String> getCallingBell() async {
+    return CallManager.instance.getCallingBell();
   }
 
   void setCallingBellForUserWith(String userId, String filePath) {
     CallManager.instance.setCallingBellForUserWith(userId, filePath);
   }
+
+  Future<String> getCallingBellWith(String userId) async {
+    return CallManager.instance.getCallingBellWith(userId);
+  }
+  //////////////// 新增：自定义铃声 ////////////////
 
   ///Enable the mute mode (the callee doesn't ring)
   Future<void> enableMuteMode(bool enable) async {
