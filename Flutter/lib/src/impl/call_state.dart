@@ -84,6 +84,9 @@ class CallState {
   bool enableIncomingBanner = false;
   bool isInNativeIncomingBanner = false;
 
+  bool isStartForegroundService = false;
+  bool forceUseV2API = false;
+
   final TUICallObserver observer = TUICallObserver(
       onError: (int code, String message) {
         TRTCLogger.info(
@@ -156,7 +159,6 @@ class CallState {
       onCallBegin: (String callId, TUICallMediaType mediaType, CallObserverExtraInfo info) {
         TRTCLogger.info(
             'TUICallObserver onCallBegin(callId:$callId, mediaType:$mediaType, info:${info.toString()})');
-        TUICallKitPlatform.instance.startForegroundService();
         CallState.instance.startTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         CallingBellFeature.stopRing();
         CallState.instance.roomId = info.roomId;

@@ -22,15 +22,17 @@ class MethodChannelTUICallKit extends TUICallKitPlatform {
   final methodChannel = const MethodChannel('tuicall_kit');
 
   @override
-  Future<void> startForegroundService() async {
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      await methodChannel.invokeMethod('startForegroundService', {});
+  Future<void> startForegroundService(bool isVideo) async {
+    if (!kIsWeb && Platform.isAndroid) {
+      await methodChannel.invokeMethod('startForegroundService', {
+        'isVideo': isVideo,
+      });
     }
   }
 
   @override
   Future<void> stopForegroundService() async {
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
+    if (!kIsWeb && Platform.isAndroid) {
       await methodChannel.invokeMethod('stopForegroundService', {});
     }
   }
@@ -241,16 +243,16 @@ class MethodChannelTUICallKit extends TUICallKitPlatform {
   }
 
   @override
-  Future<void> loginSuccessEvent() async {
+  Future<void> loginNativeTUICore(int sdkAppId, String userId, String userSig) async {
     if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      await methodChannel.invokeMethod('loginSuccessEvent', {});
+      await methodChannel.invokeMethod('loginNativeTUICore', {"sdkAppId": sdkAppId, "userId": userId, "userSig": userSig});
     }
   }
 
   @override
-  Future<void> logoutSuccessEvent() async {
+  Future<void> logoutNativeTUICore() async {
     if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      await methodChannel.invokeMethod('logoutSuccessEvent', {});
+      await methodChannel.invokeMethod('logoutNativeTUICore', {});
     }
   }
 

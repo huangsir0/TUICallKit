@@ -17,8 +17,8 @@ abstract class TUICallKitPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<void> startForegroundService() async {
-    await instance.startForegroundService();
+  Future<void> startForegroundService(bool isVideo) async {
+    await instance.startForegroundService(isVideo);
   }
 
   Future<void> stopForegroundService() async {
@@ -106,12 +106,12 @@ abstract class TUICallKitPlatform extends PlatformInterface {
     await instance.imSDKInitSuccessEvent();
   }
 
-  Future<void> loginSuccessEvent() async {
-    await instance.loginSuccessEvent();
+  Future<void> loginNativeTUICore(int sdkAppId, String userId, String userSig) async {
+    await instance.loginNativeTUICore(sdkAppId, userId, userSig);
   }
 
-  Future<void> logoutSuccessEvent() async {
-    await instance.logoutSuccessEvent();
+  Future<void> logoutNativeTUICore() async {
+    await instance.logoutNativeTUICore();
   }
 
   Future<bool> checkUsbCameraService() async {

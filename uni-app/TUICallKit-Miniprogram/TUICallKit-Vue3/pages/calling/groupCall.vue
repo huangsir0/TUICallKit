@@ -76,8 +76,7 @@
 <script setup>
 import { nextTick, shallowRef, ref, reactive } from "vue";
 import { onUnload, onLoad } from "@dcloudio/uni-app";
-import { TUICallKitServer } from "../../TUICallKit/src/index";
-import Chat from '@tencentcloud/chat';
+import { TUICallKitAPI } from "../../TUICallKit/src/index";
 const data = reactive({
   searchList: [],
   callBtn: false,
@@ -122,7 +121,7 @@ const searchUser = () => {
       return;
     }
   }
-  TUICallKitServer.getTim()
+  TUICallKitAPI.getTim()
     .getUserProfile({ userIDList: [data.userIDToSearch] })
     .then((imResponse) => {
       if (imResponse.data.length === 0) {
@@ -175,10 +174,8 @@ const groupCall = async () => {
     };
     groupList[i] = user;
   }
-  // 创建群聊
-  // await createGroup(groupList);
   // 发起群通话
-  TUICallKitServer.calls({
+  TUICallKitAPI.calls({
     userIDList,
     type: data.type,
     // groupID: data.groupID,
@@ -227,23 +224,6 @@ const allCancel = () => {
   }
   data.searchList = newlist;
   data.ischeck = true;
-};
-
-// 创建IM群聊
-const createGroup = (userIDList) => {
-  return TUICallKitServer.getTim()
-    .createGroup({
-      type: Chat.TYPES.GRP_PUBLIC,
-      name: "call 测试",
-      memberList: userIDList, // 如果填写了 memberList，则必须填写 userID
-    })
-    .then((imResponse) => {
-      // 创建成功
-      data.groupID = imResponse.data.group.groupID;
-    })
-    .catch((imError) => {
-      console.warn("createGroup error:", imError); // 创建群组失败的相关信息
-    });
 };
 
 onLoad((option) => {
