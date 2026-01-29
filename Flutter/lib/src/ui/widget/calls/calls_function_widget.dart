@@ -84,6 +84,10 @@ class CallsFunctionWidget {
   }
 
   static _buildVideoCallerAndCalleeAcceptedFunctionView(BuildContext context, Function close) {
+    ////////////////////////// 群语音不支持开启摄像头 begin //////////////////////////
+    return _buildVideoCallerAndCalleeAcceptedFunctionViewV2(context, close);
+    ////////////////////////// 群语音不支持开启摄像头 end //////////////////////////
+    
     double bigBtnHeight = 52;
     double smallBtnHeight = 35;
     double edge = 40;
@@ -225,6 +229,154 @@ class CallsFunctionWidget {
                   ],
                 ))));
   }
+
+  ////////////////////////// 群语音不支持开启摄像头 begin //////////////////////////
+  static _buildVideoCallerAndCalleeAcceptedFunctionViewV2(BuildContext context, Function close) {
+    double bigBtnHeight = 52;
+    double smallBtnHeight = 35;
+    double edge = 40;
+    double bottomEdge = 10;
+    int duration = 300;
+    int btnWidth = 100;
+    Curve curve = Curves.easeInOut;
+    final mediaType = CallState.instance.mediaType;
+    final isVideoCall = mediaType == TUICallMediaType.video;
+    return ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16.0),
+          topRight: Radius.circular(16.0),
+        ),
+        child: GestureDetector(
+            onVerticalDragUpdate: (details) => _functionWidgetVerticalDragUpdate(details),
+            child: AnimatedContainer(
+                curve: curve,
+                height: CallsWidget.isFunctionExpand ? 200 : 90,
+                duration: Duration(milliseconds: duration),
+                color: const Color.fromRGBO(52, 56, 66, 1.0),
+                child: Stack(
+                  children: [
+                    AnimatedPositioned(
+                      curve: curve,
+                      duration: Duration(milliseconds: duration),
+                      left: CallsWidget.isFunctionExpand
+                          ? ((MediaQuery.of(context).size.width / (isVideoCall ? 4 : 3)) - (btnWidth / 2))
+                          : (MediaQuery.of(context).size.width * 2 / 6 - btnWidth / 2),
+                      bottom: CallsWidget.isFunctionExpand ? bottomEdge + bigBtnHeight + edge : bottomEdge,
+                      child: ExtendButton(
+                        imgUrl: CallState.instance.isMicrophoneMute
+                            ? "assets/images/mute_on.png"
+                            : "assets/images/mute.png",
+                        tips: CallsWidget.isFunctionExpand
+                            ? (CallState.instance.isMicrophoneMute
+                            ? CallKit_t("microphoneIsOff")
+                            : CallKit_t("microphoneIsOn"))
+                            : '',
+                        textColor: Colors.white,
+                        imgHeight: CallsWidget.isFunctionExpand ? bigBtnHeight : smallBtnHeight,
+                        onTap: () {
+                          _handleSwitchMic();
+                        },
+                        userAnimation: true,
+                        duration: Duration(milliseconds: duration),
+                      ),
+                    ),
+                    AnimatedPositioned(
+                      curve: curve,
+                      duration: Duration(milliseconds: duration),
+                      left: CallsWidget.isFunctionExpand
+                          ? ((isVideoCall ? MediaQuery.of(context).size.width / 2 : MediaQuery.of(context).size.width / 3 * 2) - btnWidth / 2)
+                          : (MediaQuery.of(context).size.width * 3 / 6 - btnWidth / 2),
+                      bottom: CallsWidget.isFunctionExpand ? bottomEdge + bigBtnHeight + edge : bottomEdge,
+                      child: ExtendButton(
+                        imgUrl:
+                        CallState.instance.audioDevice == TUIAudioPlaybackDevice.speakerphone
+                            ? "assets/images/handsfree_on.png"
+                            : "assets/images/handsfree.png",
+                        tips: CallsWidget.isFunctionExpand
+                            ? (CallState.instance.audioDevice == TUIAudioPlaybackDevice.speakerphone
+                            ? CallKit_t("speakerIsOn")
+                            : CallKit_t("speakerIsOff"))
+                            : '',
+                        textColor: Colors.white,
+                        imgHeight: CallsWidget.isFunctionExpand ? bigBtnHeight : smallBtnHeight,
+                        onTap: () {
+                          _handleSwitchAudioDevice();
+                        },
+                        userAnimation: true,
+                        duration: Duration(milliseconds: duration),
+                      ),
+                    ),
+                    if (isVideoCall)
+                      AnimatedPositioned(
+                        curve: curve,
+                        duration: Duration(milliseconds: duration),
+                        left: CallsWidget.isFunctionExpand
+                            ? (MediaQuery.of(context).size.width * 3 / 4 - btnWidth / 2)
+                            : (MediaQuery.of(context).size.width * 4 / 6 - btnWidth / 2),
+                        bottom: CallsWidget.isFunctionExpand ? bottomEdge + bigBtnHeight + edge : bottomEdge,
+                        child: ExtendButton(
+                          imgUrl: CallState.instance.isCameraOpen
+                              ? "assets/images/camera_on.png"
+                              : "assets/images/camera_off.png",
+                          tips: CallsWidget.isFunctionExpand
+                              ? (CallState.instance.isCameraOpen
+                              ? CallKit_t("cameraIsOn")
+                              : CallKit_t("cameraIsOff"))
+                              : '',
+                          textColor: Colors.white,
+                          imgHeight: CallsWidget.isFunctionExpand ? bigBtnHeight : smallBtnHeight,
+                          onTap: () {
+                            _handleOpenCloseCamera();
+                          },
+                          userAnimation: true,
+                          duration: Duration(milliseconds: duration),
+                        ),
+                      ),
+                    AnimatedPositioned(
+                      curve: curve,
+                      duration: Duration(milliseconds: duration),
+                      left: CallsWidget.isFunctionExpand
+                          ? (MediaQuery.of(context).size.width / 2 - btnWidth / 2)
+                          : (MediaQuery.of(context).size.width * 5 / 6 - btnWidth / 2),
+                      bottom: bottomEdge,
+                      child: ExtendButton(
+                        imgUrl: "assets/images/hangup.png",
+                        textColor: Colors.white,
+                        imgHeight: CallsWidget.isFunctionExpand ? bigBtnHeight : smallBtnHeight,
+                        onTap: () {
+                          _handleHangUp(close);
+                        },
+                        userAnimation: true,
+                        duration: Duration(milliseconds: duration),
+                      ),
+                    ),
+                    AnimatedPositioned(
+                        curve: curve,
+                        duration: Duration(milliseconds: duration),
+                        left: (MediaQuery.of(context).size.width / 6 - smallBtnHeight / 2),
+                        bottom: CallsWidget.isFunctionExpand
+                            ? bottomEdge + smallBtnHeight / 4 + 22
+                            : bottomEdge + 22,
+                        child: InkWell(
+                          onTap: () {
+                            CallsWidget.isFunctionExpand = !CallsWidget.isFunctionExpand;
+                            TUICore.instance.notifyEvent(setStateEvent);
+                          },
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.identity()
+                              ..scale(1.0, CallsWidget.isFunctionExpand ? 1.0 : -1.0, 1.0),
+                            child: Image.asset(
+                              'assets/images/arrow.png',
+                              package: 'tencent_calls_uikit',
+                              width: smallBtnHeight,
+                            ),
+                          ),
+                        ))
+                  ],
+                ))));
+  }
+  ////////////////////////// 群语音不支持开启摄像头 end //////////////////////////
 
   static _functionWidgetVerticalDragUpdate(DragUpdateDetails details) {
     if (details.delta.dy < 0 && !CallsWidget.isFunctionExpand) {
